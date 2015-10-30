@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/color"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"code.google.com/p/freetype-go/freetype"
 )
@@ -17,6 +19,14 @@ import (
 var white = color.Gray{0xFF}
 var black = color.Gray{0x00}
 var ftContext *freetype.Context
+
+var studentIDString string
+var formIDString string
+var dataString string
+
+var SID []int
+var FID []int
+var DATA []int
 
 const (
 	BUBBLE_WIDTH     = 5.0
@@ -31,6 +41,35 @@ const (
 	NUMBER_SECTOR
 )
 
+func init() {
+	flag.StringVar(&studentIDString, "sid", "", "populate a student ID")
+	flag.StringVar(&formIDString, "fid", "", "populate the form ID")
+	flag.StringVar(&dataString, "data", "", "populate responses. eg: '1,2,8,4'")
+}
+
+func parseFlags() {
+	if studentIDString != "" {
+		SID = []int{}
+		for i := 0; i < len(studentIDString); i++ {
+			SID = append(SID, int(studentIDString[i])-48)
+		}
+	}
+
+	if formIDString != "" {
+		FID = []int{}
+		a, _ := strconv.Atoi(formIDString)
+		FID = append(FID, a)
+	}
+
+	if dataString != "" {
+		DATA = []int{}
+		nums := strings.Split(dataString, ",")
+		for i := 0; i < len(nums); i++ {
+			DATA = append(DATA, int(nums[i][0])-48)
+		}
+	}
+}
+
 func drawRect(img *image.Gray, c color.Gray, xPos, yPos, width, height float64) {
 	for h := 0.0; h < height; h += 1.0 {
 		for w := 0.0; w < width; w += 1.0 {
@@ -39,9 +78,14 @@ func drawRect(img *image.Gray, c color.Gray, xPos, yPos, width, height float64) 
 	}
 }
 
-func drawBubble(img *image.Gray, xPos, yPos, width, height float64, content string) {
+func drawBubble(img *image.Gray, xPos, yPos, width, height float64, content string, filled bool) {
 	gapBeg := xPos + width/4.0
 	gapEnd := xPos + width - width/4.0
+
+	if filled {
+		drawRect(img, black, xPos, yPos, width, height)
+		return
+	}
 
 	ftContext.DrawString(content, freetype.Pt(int(gapBeg+width/6), int(yPos+height)))
 	for w := xPos; w < xPos+width; w += 1.0 {
@@ -82,7 +126,10 @@ func drawSector(img *image.Gray,
 	bottomless bool,
 	stype int,
 	numbered bool, offset int,
-	heading string) (float64, float64) {
+	heading string,
+	data []int) (float64, float64) {
+
+	origOffset := offset
 
 	// Compute marker width
 	halfUnit := unitSize / 2.0
@@ -185,18 +232,47 @@ func drawSector(img *image.Gray,
 	if heading != "" {
 		y += HEADING_SPACE * unitSize
 	}
+
 	xStart := x
 	for j := 0; j < rows; j++ {
 		x = xStart
 		for i := 0; i < cols; i++ {
 			if stype == QUESTION_SECTOR {
-				drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(i+65))
+				if data != nil && len(data) > origOffset-1+j {
+					if data[j+origOffset-1] == 1<<uint(i) {
+						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(i+65), true)
+					} else {
+						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(i+65), false)
+					}
+				} else {
+					drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(i+65), false)
+				}
 			} else if stype == FORM_SECTOR {
-				drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(j*cols+i+65))
+				if data != nil && len(data) == 1 {
+					if j*10+i == data[0] {
+						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(j*cols+i+65), true)
+					} else {
+						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(j*cols+i+65), false)
+					}
+				} else {
+					drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(j*cols+i+65), false)
+				}
 			} else if stype == NUMBER_SECTOR {
-				drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, strconv.Itoa(j))
+				if data != nil {
+					if i < len(data) {
+						if data[i] == j {
+							drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, strconv.Itoa(j), true)
+						} else {
+							drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, strconv.Itoa(j), false)
+						}
+					} else {
+						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, strconv.Itoa(j), false)
+					}
+				} else {
+					drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, strconv.Itoa(j), false)
+				}
 			} else {
-				drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, "")
+				drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, "", false)
 			}
 			x += BUBBLE_WIDTH*unitSize + BUBBLE_HSEP*unitSize
 		}
@@ -263,6 +339,8 @@ func drawBarcode(img *image.Gray, unitSize, xPos, yPos float64, num int) {
 }
 
 func main() {
+	flag.Parse()
+	parseFlags()
 	dpi := 300.0
 	unitSize := (1.0 / 16.0) * dpi // Unit is 1/16th of in inch
 
@@ -298,26 +376,26 @@ func main() {
 	yPos := unitSize * 16.0
 	xPos := unitSize * 16.0
 	// Student ID
-	w, h := drawSector(img, unitSize, xPos, yPos, 10, 10, true, NUMBER_SECTOR, false, 0, "Student ID")
+	w, h := drawSector(img, unitSize, xPos, yPos, 10, 10, true, NUMBER_SECTOR, false, 0, "Student ID", SID)
 	yPos += h
 	// Form ID
-	w, h = drawSector(img, unitSize, xPos, yPos, 2, 10, false, FORM_SECTOR, false, 0, "Form ID")
+	w, h = drawSector(img, unitSize, xPos, yPos, 2, 10, false, FORM_SECTOR, false, 0, "Form ID", FID)
 	yPos += h + unitSize*2
 
 	// Questions: Col 1
 	qStartHeight := yPos
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, true, QUESTION_SECTOR, true, 1, "")
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, true, QUESTION_SECTOR, true, 1, "", DATA)
 	yPos += h
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false, QUESTION_SECTOR, true, 21, "")
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false, QUESTION_SECTOR, true, 21, "", DATA)
 	//yPos += h
 	//w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false)
 
 	// Questions: Col 2
 	yPos = qStartHeight
 	xPos += w + unitSize*8
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, true, QUESTION_SECTOR, true, 41, "")
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, true, QUESTION_SECTOR, true, 41, "", DATA)
 	yPos += h
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false, QUESTION_SECTOR, true, 61, "")
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false, QUESTION_SECTOR, true, 61, "", DATA)
 	//yPos += h
 	//w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false)
 
