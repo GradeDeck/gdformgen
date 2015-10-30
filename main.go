@@ -23,6 +23,7 @@ var ftContext *freetype.Context
 var studentIDString string
 var formIDString string
 var dataString string
+var outFilename string
 
 var SID []int
 var FID []int
@@ -45,6 +46,7 @@ func init() {
 	flag.StringVar(&studentIDString, "sid", "", "populate a student ID")
 	flag.StringVar(&formIDString, "fid", "", "populate the form ID")
 	flag.StringVar(&dataString, "data", "", "populate responses. eg: '1,2,8,4'")
+	flag.StringVar(&outFilename, "out", "out.png", "where the output png will be saved")
 }
 
 func parseFlags() {
@@ -399,9 +401,10 @@ func main() {
 	//yPos += h
 	//w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false)
 
-	imgFile, err := os.Create("test.png")
+	imgFile, err := os.Create(outFilename)
 	if err != nil {
 		log.Fatal("Failed to open file. ", err)
 	}
+	defer imgFile.Close()
 	png.Encode(imgFile, img)
 }
