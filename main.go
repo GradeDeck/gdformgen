@@ -33,7 +33,9 @@ const (
 	BUBBLE_WIDTH     = 5.0
 	BUBBLE_HEIGHT    = 1.0
 	BUBBLE_HSEP      = 2.0
-	BUBBLE_VSEP      = 1.2
+	BUBBLE_Q_HSEP    = 2.66
+	BUBBLE_VSEP      = 1.3
+	BUBBLE_Q_VSEP    = 1.5
 	FONT_FILE        = "/Library/Fonts/Arial.ttf"
 	BUBBLE_FONT_SIZE = 8
 	HEADING_SPACE    = 2.5
@@ -94,13 +96,13 @@ func drawBubble(img *image.Gray, xPos, yPos, width, height float64, content stri
 		if w >= gapBeg && w <= gapEnd {
 			continue
 		}
-		img.SetGray(int(w), int(yPos), color.Gray{0xBB})
-		img.SetGray(int(w), int(yPos+height), color.Gray{0xDD})
+		img.SetGray(int(w), int(yPos), color.Gray{0x22})
+		img.SetGray(int(w), int(yPos+height), color.Gray{0x22})
 	}
 
 	for h := yPos; h < yPos+height; h += 1.0 {
-		img.SetGray(int(xPos), int(h), color.Gray{0xDD})
-		img.SetGray(int(xPos+width), int(h), color.Gray{0xDD})
+		img.SetGray(int(xPos), int(h), color.Gray{0x22})
+		img.SetGray(int(xPos+width), int(h), color.Gray{0x22})
 	}
 }
 
@@ -125,6 +127,8 @@ func drawAP(img *image.Gray, unitSize, xPos, yPos float64) {
 func drawSector(img *image.Gray,
 	unitSize, xPos, yPos float64,
 	rows, cols int,
+	bubbleHSep, bubbleVSep,
+	leftMargin float64,
 	bottomless bool,
 	stype int,
 	numbered bool, offset int,
@@ -136,7 +140,7 @@ func drawSector(img *image.Gray,
 	// Compute marker width
 	halfUnit := unitSize / 2.0
 	qUnit := unitSize / 4.0
-	markerWidth := unitSize*BUBBLE_WIDTH + unitSize*BUBBLE_HSEP - unitSize
+	markerWidth := unitSize*BUBBLE_WIDTH + unitSize*bubbleHSep - unitSize
 
 	// Draw the sector origin
 	drawSO(img, unitSize, xPos, yPos)
@@ -149,22 +153,26 @@ func drawSector(img *image.Gray,
 	// Draw the h markers
 	x = xPos + 4.0*unitSize + halfUnit
 	y = yPos + unitSize + qUnit
-	for i := 0; i < cols+1; i++ {
+	drawRect(img, black, x, y, markerWidth-leftMargin, halfUnit)
+	x += markerWidth - leftMargin + unitSize
+	for i := 0; i < cols-1; i++ {
 		drawRect(img, black, x, y, markerWidth, halfUnit)
 		x += markerWidth + unitSize
 	}
-	// Draw the end cap
-	drawRect(img, black, x, y, unitSize+qUnit, halfUnit)
+
+	// Draw the last top marker
+	drawRect(img, black, x, y, markerWidth+unitSize*2, halfUnit)
 
 	// Draw right markers
-	x -= halfUnit + unitSize + qUnit
-	y = yPos + 3.0*unitSize + BUBBLE_VSEP*unitSize
-	if heading != "" {
-		y += HEADING_SPACE * unitSize
-	}
+	x += markerWidth - unitSize
+	//x -= halfUnit + unitSize + qUnit
+	y = yPos + 3.0*unitSize + bubbleVSep*unitSize
+	//if heading != "" {
+	//	y += HEADING_SPACE * unitSize
+	//}
 	for i := 0; i < rows; i++ {
 		drawRect(img, black, x, y, unitSize*3.0, halfUnit)
-		y += BUBBLE_HEIGHT*unitSize + BUBBLE_VSEP*unitSize
+		y += BUBBLE_HEIGHT*unitSize + bubbleVSep*unitSize
 	}
 
 	// Draw the bottom markers
@@ -174,34 +182,37 @@ func drawSector(img *image.Gray,
 		drawRect(img, black, x, y, unitSize, unitSize)
 		x = xPos + 4.0*unitSize + halfUnit
 		y += qUnit
-		for i := 0; i < cols+1; i++ {
+
+		drawRect(img, black, x, y, markerWidth-leftMargin, halfUnit)
+		x += markerWidth - leftMargin + unitSize
+		for i := 0; i < cols-1; i++ {
 			drawRect(img, black, x, y, markerWidth, halfUnit)
 			x += markerWidth + unitSize
 		}
-		drawRect(img, black, x, y, unitSize+qUnit, halfUnit)
+		// Draw the last bottom marker
+		drawRect(img, black, x, y, markerWidth+unitSize*2, halfUnit)
 	}
 
 	// Draw left markers
 	x = xPos
-	y = yPos + 3.0*unitSize + BUBBLE_VSEP*unitSize
-	if heading != "" {
-		y += HEADING_SPACE * unitSize
-	}
+	y = yPos + 3.0*unitSize + bubbleVSep*unitSize
+	//if heading != "" {
+	//	y += HEADING_SPACE * unitSize
+	//}
 	for i := 0; i < rows; i++ {
 		drawRect(img, black, x, y, unitSize*3.0, halfUnit)
-		y += BUBBLE_HEIGHT*unitSize + BUBBLE_VSEP*unitSize
+		y += BUBBLE_HEIGHT*unitSize + bubbleVSep*unitSize
 	}
 	if !bottomless {
 		drawRect(img, black, x, y, unitSize*3.0, halfUnit)
-		y += BUBBLE_HEIGHT*unitSize + BUBBLE_VSEP*unitSize
+		y += BUBBLE_HEIGHT*unitSize + bubbleVSep*unitSize
 	}
 
 	// Draw the heading
 	if heading != "" {
-		x = xPos + 3.0*unitSize + unitSize + unitSize + markerWidth + qUnit
-		x -= BUBBLE_WIDTH * unitSize / 2.0
-		y = yPos + 3.0*unitSize + HEADING_SPACE*unitSize*0.85
-		ftContext.SetFontSize(11)
+		x = xPos + 5.0*unitSize
+		y = yPos - 3.0*unitSize + HEADING_SPACE*unitSize
+		ftContext.SetFontSize(9)
 		ftContext.SetSrc(image.NewUniform(color.Gray{0x00}))
 		ftContext.DrawString(heading, freetype.Pt(int(x), int(y)))
 	}
@@ -211,7 +222,7 @@ func drawSector(img *image.Gray,
 	ftContext.SetSrc(image.NewUniform(color.Gray{0x00}))
 	if numbered {
 		x = xPos + 3.0*unitSize + unitSize + unitSize + markerWidth + qUnit
-		y = yPos + 3.0*unitSize + BUBBLE_VSEP*unitSize + qUnit
+		y = yPos + 3.0*unitSize + bubbleVSep*unitSize + qUnit
 		x -= BUBBLE_WIDTH*unitSize + halfUnit
 		y += BUBBLE_HEIGHT * unitSize / 1.75
 		if heading != "" {
@@ -220,20 +231,20 @@ func drawSector(img *image.Gray,
 		for j := 0; j < rows; j++ {
 			ftContext.DrawString(strconv.Itoa(offset), freetype.Pt(int(x), int(y)))
 			offset += 1
-			y += BUBBLE_HEIGHT*unitSize + BUBBLE_VSEP*unitSize
+			y += BUBBLE_HEIGHT*unitSize + bubbleVSep*unitSize
 		}
 	}
 
 	// Draw bubbles
 	ftContext.SetFontSize(6.5)
 	ftContext.SetSrc(image.NewUniform(color.Gray{0xBB}))
-	x = xPos + 3.0*unitSize + unitSize + unitSize + markerWidth + qUnit
-	y = yPos + 3.0*unitSize + BUBBLE_VSEP*unitSize + qUnit
+	x = xPos + 3.0*unitSize + unitSize + unitSize + markerWidth - leftMargin
+	y = yPos + 3.0*unitSize + bubbleVSep*unitSize + qUnit
 	x -= BUBBLE_WIDTH * unitSize / 2.0
 	y -= BUBBLE_HEIGHT * unitSize / 2.0
-	if heading != "" {
-		y += HEADING_SPACE * unitSize
-	}
+	//if heading != "" {
+	//	y += HEADING_SPACE * unitSize
+	//}
 
 	xStart := x
 	for j := 0; j < rows; j++ {
@@ -276,14 +287,14 @@ func drawSector(img *image.Gray,
 			} else {
 				drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, "", false)
 			}
-			x += BUBBLE_WIDTH*unitSize + BUBBLE_HSEP*unitSize
+			x += BUBBLE_WIDTH*unitSize + bubbleHSep*unitSize
 		}
-		y += BUBBLE_HEIGHT*unitSize + BUBBLE_VSEP*unitSize
+		y += BUBBLE_HEIGHT*unitSize + bubbleVSep*unitSize
 	}
-	sWidth := 3.0*unitSize + halfUnit + unitSize + markerWidth*float64(cols+1) + unitSize*float64(cols+1) + unitSize + qUnit
+	sWidth := 3.0*unitSize + halfUnit + unitSize + markerWidth*float64(cols+1) + unitSize*float64(cols+1) + unitSize + qUnit - leftMargin
 	sHeight := 3.0*unitSize + // Sector block
-		BUBBLE_VSEP*unitSize + // Space below sector block
-		float64(rows)*(BUBBLE_HEIGHT*unitSize+BUBBLE_VSEP*unitSize) + // Rows //NOTE
+		bubbleVSep*unitSize + // Space below sector block
+		float64(rows)*(BUBBLE_HEIGHT*unitSize+bubbleVSep*unitSize) + // Rows //NOTE
 		halfUnit + qUnit // Bottom markers
 	if bottomless {
 		sHeight -= halfUnit + qUnit
@@ -294,14 +305,28 @@ func drawSector(img *image.Gray,
 	return sWidth, sHeight
 }
 
-func toBase4(num int) []int {
-	var result []int
+func toBase4(num int, size int) []int {
+	result := make([]int, size)
+	var i = 0
 	for num != 0 {
 		r := num % 4
 		num = num / 4
-		result = append(result, r)
+		result[i] = r
+		i++
 	}
 	return result
+}
+
+func csumGen(num int) int {
+	digit := 9
+	sum := 0
+	for digit > 0 {
+		x := num % 10 // Extract the digit at the current position
+		sum += x * digit
+		num /= 10
+		digit--
+	}
+	return sum % 11
 }
 
 func drawBar(img *image.Gray, unitSize, xPos, yPos float64, k int) float64 {
@@ -327,6 +352,8 @@ func drawBar(img *image.Gray, unitSize, xPos, yPos float64, k int) float64 {
 func drawBarcode(img *image.Gray, unitSize, xPos, yPos float64, num int) {
 	drawSO(img, unitSize, xPos, yPos)
 	x := xPos + unitSize*4.0
+
+	// Draw reference bar
 	x += drawBar(img, unitSize, x, yPos, 0) + unitSize
 
 	// Print the form number below the barcode
@@ -334,10 +361,21 @@ func drawBarcode(img *image.Gray, unitSize, xPos, yPos float64, num int) {
 	ftContext.SetSrc(image.NewUniform(color.Black))
 	ftContext.DrawString(fmt.Sprintf("%d", num), freetype.Pt(int(x), int(yPos+unitSize*7)))
 
-	ds := toBase4(num)
+	// Draw bars
+	ds := toBase4(num, 9)
 	for i := len(ds) - 1; i >= 0; i-- {
 		x += drawBar(img, unitSize, x, yPos, ds[i]) + unitSize
 	}
+
+	// Draw checksum bars
+	ckBase10 := csumGen(num)
+	fmt.Println("ckBase10 = ", ckBase10)
+	ck := toBase4(ckBase10, 2)
+	fmt.Println("ck = ", ck)
+	for i := len(ck) - 1; i >= 0; i-- {
+		x += drawBar(img, unitSize, x, yPos, ck[i]) + unitSize
+	}
+
 }
 
 func main() {
@@ -368,38 +406,56 @@ func main() {
 	ftContext.SetDst(img)
 	ftContext.SetSrc(image.NewUniform(color.Gray{0xBB}))
 
-	drawFP(img, unitSize, unitSize*5.0, unitSize*5.0)
-	drawFP(img, unitSize, pageWidth-unitSize*14.0, unitSize*5.0)
-	drawFP(img, unitSize, unitSize*5.0, pageHeight-unitSize*14.0)
-	drawAP(img, unitSize, pageWidth-unitSize*13.0, pageHeight-unitSize*13.0)
-	drawBarcode(img, unitSize, unitSize*16.0, pageHeight-unitSize*16.0, 111426)
+	drawFP(img, unitSize, 0, 0)
+	drawFP(img, unitSize, pageWidth-unitSize*9.0, 0)
+	drawFP(img, unitSize, 0, pageHeight-unitSize*9.0)
+	drawAP(img, unitSize, pageWidth-unitSize*8.0, pageHeight-unitSize*8.0)
+	drawBarcode(img, unitSize, unitSize*14.0, pageHeight-unitSize*13.0, 111427)
 
 	// Initial Offset
-	yPos := unitSize * 16.0
-	xPos := unitSize * 16.0
+	yPos := unitSize * 14.0
+	xPos := unitSize * 14.0
+
+	// Name:
+	ftContext.SetFontSize(11)
+	ftContext.SetSrc(image.NewUniform(color.Gray{0x00}))
+	ftContext.DrawString("Name:_________________________________   Student ID:______________________", freetype.Pt(int(xPos+4*unitSize), int(unitSize*5)))
+
 	// Student ID
-	w, h := drawSector(img, unitSize, xPos, yPos, 10, 10, true, NUMBER_SECTOR, false, 0, "Student ID", SID)
-	yPos += h
+	w, h := drawSector(img, unitSize, xPos, yPos, 10, 10, BUBBLE_HSEP, BUBBLE_VSEP, unitSize*3.0, false, NUMBER_SECTOR, false, 0, "Student ID", SID)
+	//yPos += h
 	// Form ID
-	w, h = drawSector(img, unitSize, xPos, yPos, 2, 10, false, FORM_SECTOR, false, 0, "Form ID", FID)
+	w, h = drawSector(img, unitSize, xPos+w-3*unitSize, yPos, 10, 2, BUBBLE_HSEP, BUBBLE_VSEP, unitSize*3, false, FORM_SECTOR, false, 0, "Form", FID)
 	yPos += h + unitSize*2
 
 	// Questions: Col 1
 	qStartHeight := yPos
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, true, QUESTION_SECTOR, true, 1, "", DATA)
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, BUBBLE_Q_HSEP, BUBBLE_Q_VSEP, 0, true, QUESTION_SECTOR, true, 1, "", DATA)
 	yPos += h
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false, QUESTION_SECTOR, true, 21, "", DATA)
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, BUBBLE_Q_HSEP, BUBBLE_Q_VSEP, 0, false, QUESTION_SECTOR, true, 21, "", DATA)
 	//yPos += h
 	//w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false)
 
 	// Questions: Col 2
 	yPos = qStartHeight
-	xPos += w + unitSize*8
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, true, QUESTION_SECTOR, true, 41, "", DATA)
+	xPos += w - unitSize*3 //+ unitSize*8
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, BUBBLE_Q_HSEP, BUBBLE_Q_VSEP, 0, true, QUESTION_SECTOR, true, 41, "", DATA)
 	yPos += h
-	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false, QUESTION_SECTOR, true, 61, "", DATA)
+	w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, BUBBLE_Q_HSEP, BUBBLE_Q_VSEP, 0, false, QUESTION_SECTOR, true, 61, "", DATA)
 	//yPos += h
 	//w, h = drawSector(img, unitSize, xPos, yPos, 20, 5, false)
+
+	// GD Logo
+	logoFile, err := os.Open("gradeDeckLogo.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	logo, err := png.Decode(logoFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	draw.Draw(img, logo.Bounds().Add(image.Point{int(pageWidth - unitSize*40), int(pageHeight - unitSize*14.0)}), logo, image.ZP, draw.Src)
 
 	imgFile, err := os.Create(outFilename)
 	if err != nil {
