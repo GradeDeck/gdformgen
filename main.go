@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.google.com/p/freetype-go/freetype"
+	"github.com/golang/freetype"
 )
 
 var white = color.Gray{0xFF}
@@ -36,7 +36,7 @@ const (
 	BUBBLE_Q_HSEP    = 2.66
 	BUBBLE_VSEP      = 1.3
 	BUBBLE_Q_VSEP    = 1.5
-	FONT_FILE        = "/Library/Fonts/Arial.ttf"
+	FONT_FILE        = "LiberationSans-Regular.ttf"
 	BUBBLE_FONT_SIZE = 8
 	HEADING_SPACE    = 2.5
 	QUESTION_SECTOR  = iota
