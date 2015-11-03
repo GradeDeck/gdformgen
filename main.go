@@ -36,7 +36,7 @@ const (
 	BUBBLE_Q_HSEP    = 2.66
 	BUBBLE_VSEP      = 1.3
 	BUBBLE_Q_VSEP    = 1.5
-	FONT_FILE        = "/Library/Fonts/Arial.ttf"
+	FONT_FILE        = "./LiberationSans-Regular.ttf"
 	BUBBLE_FONT_SIZE = 8
 	HEADING_SPACE    = 2.5
 	QUESTION_SECTOR  = iota
@@ -55,7 +55,7 @@ func parseFlags() {
 	if studentIDString != "" {
 		SID = []int{}
 		for i := 0; i < len(studentIDString); i++ {
-			SID = append(SID, int(studentIDString[i])-48)
+			SID = append(SID, int(studentIDString[i]-48))
 		}
 	}
 
@@ -69,7 +69,8 @@ func parseFlags() {
 		DATA = []int{}
 		nums := strings.Split(dataString, ",")
 		for i := 0; i < len(nums); i++ {
-			DATA = append(DATA, int(nums[i][0])-48)
+			a, _ := strconv.Atoi(nums[i])
+			DATA = append(DATA, a)
 		}
 	}
 }
@@ -262,7 +263,7 @@ func drawSector(img *image.Gray,
 				}
 			} else if stype == FORM_SECTOR {
 				if data != nil && len(data) == 1 {
-					if j*10+i == data[0] {
+					if j*cols+i == data[0] {
 						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(j*cols+i+65), true)
 					} else {
 						drawBubble(img, x, y, BUBBLE_WIDTH*unitSize, BUBBLE_HEIGHT*unitSize, string(j*cols+i+65), false)

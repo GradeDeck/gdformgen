@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import sys
+import os
 import random
-from subprocess import call
 
 HIGH = 0
 MED = 1
@@ -40,7 +40,7 @@ for sid in range(1, numStudents+1):
 
     sidFlag = "-sid "+`sid`
     dataFlag = "-data "+(",".join(map(str, result)))
-    outFlag = "-out s"+`sid`+".png"
+    outFlag = "-out ./s"+`sid`+".png"
     flags = sidFlag+" "+dataFlag+" "+outFlag
     print(flags)
-    call(["./gdformgen", sidFlag, dataFlag, outFlag], shell=True)
+    os.system("./gdformgen "+flags)
