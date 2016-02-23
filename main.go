@@ -214,7 +214,7 @@ func drawSector(img *image.Gray,
 		x = xPos + 5.0*unitSize
 		y = yPos - 3.0*unitSize + HEADING_SPACE*unitSize
 		ftContext.SetFontSize(9)
-		ftContext.SetSrc(image.NewUniform(color.Gray{0x00}))
+		ftContext.SetSrc(image.NewUniform(color.Gray{0x55}))
 		ftContext.DrawString(heading, freetype.Pt(int(x), int(y)))
 	}
 
@@ -238,7 +238,7 @@ func drawSector(img *image.Gray,
 
 	// Draw bubbles
 	ftContext.SetFontSize(6.5)
-	ftContext.SetSrc(image.NewUniform(color.Gray{0xBB}))
+	ftContext.SetSrc(image.NewUniform(color.Gray{0x00}))
 	x = xPos + 3.0*unitSize + unitSize + unitSize + markerWidth - leftMargin
 	y = yPos + 3.0*unitSize + bubbleVSep*unitSize + qUnit
 	x -= BUBBLE_WIDTH * unitSize / 2.0
@@ -420,7 +420,7 @@ func main() {
 	// Name:
 	ftContext.SetFontSize(11)
 	ftContext.SetSrc(image.NewUniform(color.Gray{0x00}))
-	ftContext.DrawString("Name:_________________________________   Student ID:______________________", freetype.Pt(int(xPos+4*unitSize), int(unitSize*5)))
+	ftContext.DrawString("Name:_________________________   Student ID:________________  Date:___________", freetype.Pt(int(xPos), int(unitSize*5)))
 
 	// Student ID
 	w, h := drawSector(img, unitSize, xPos, yPos, 10, 10, BUBBLE_HSEP, BUBBLE_VSEP, unitSize*3.0, false, NUMBER_SECTOR, false, 0, "Student ID", SID)
